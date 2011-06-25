@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.db import models
+from django.utils.safestring import mark_safe
+
 from mptt.models import MPTTModel
 import reversion
 
@@ -30,9 +32,13 @@ class WikiPage(MPTTModel, BaseModel):
         order_insertion_by = []
         parent_attr = 'parent_page'
 
+    def __unicode__(self):
+        return self.title
+
     @property
     def html_text(self):
-        return creole2html(self.text)
+
+        return mark_safe(creole2html(self.text))
 
 
 

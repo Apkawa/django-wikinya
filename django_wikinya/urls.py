@@ -10,7 +10,7 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     # Examples:
-    # url(r'^$', 'project_skeleton.views.home', name='home'),
+    url(r'^wiki/', include('wikinya.urls')),
     # url(r'^project_skeleton/', include('project_skeleton.foo.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
