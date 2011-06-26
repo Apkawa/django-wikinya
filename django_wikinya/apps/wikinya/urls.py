@@ -5,5 +5,5 @@ import views
 
 urlpatterns = patterns('',
     # Examples:
-    url(r'^(?P<page_path>.*)$', views.wiki_page , name='home'),
+    url(r'^(?P<page_path>.*)$', views.wiki_page , name='wiki_page'),
 )

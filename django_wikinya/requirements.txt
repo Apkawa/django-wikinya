@@ -11,4 +11,5 @@ django-reversion
 django-mptt
 
 python-creole
+werkzeug
 

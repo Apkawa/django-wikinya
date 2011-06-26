@@ -1,0 +1,116 @@
+# -*- coding: utf-8 -*-
+import os
+import Image
+from django.core.files.storage import FileSystemStorage
+from django.db import models
+from django.db.models.fields.files import ImageFieldFile
+
+from south.modelsinspector import add_introspection_rules
+add_introspection_rules([], ["^utils\.snippets\.thumbsimagefield\.ThumbsImageField"])
+
+
+class ThumbsStorage(FileSystemStorage):
+    def __init__(self, size=None, thumb_sizes=None, thumb_upload_to=None, **kwargs):
+        self.size = size or None
+        self.thumb_sizes = thumb_sizes or []
+        self.thumb_upload_to = thumb_upload_to
+        super(ThumbsStorage, self).__init__(**kwargs)
+
+    def get_thumb_name(self, name, thumb_size):
+        dir_name, file_name = os.path.split(name)
+        file_root, file_ext = os.path.splitext(file_name)
+        if self.thumb_upload_to is None:
+            name = os.path.join(dir_name,
+                    "%s_%s%s" % (file_root, thumb_size, file_ext))
+        else:
+            name = self.thumb_upload_to(file_name, thumb_size)
+        return name
+
+    def get_available_name(self, name):
+        if self.exists(name):
+            self.delete(name)
+        return name
+
+    def check_path(self, name):
+        full_path = self.path(name)
+
+        directory = os.path.dirname(full_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        elif not os.path.isdir(directory):
+            raise IOError("%s exists and is not a directory." % directory)
+
+    def _save_thumb(self, name, size, thumb=True):
+        i = Image.open(self.path(name))
+        i.thumbnail([size, size], Image.ANTIALIAS)
+        if thumb:
+            name = self.path(self.get_thumb_name(name, size))
+            self.check_path(name)
+            i.save(open(name, 'w'), 'png')
+        else:
+            #Хитрый хак
+            name = self.path(name)
+            import tempfile
+            import shutil
+            tmp = tempfile.NamedTemporaryFile()
+            i.save(tmp, 'png')
+            shutil.move(tmp.name, name)
+
+        return name
+
+    def _save(self, name, content):
+        result = super(ThumbsStorage, self)._save(name, content)
+        if self.size:
+            self._save_thumb(name, self.size, thumb=False)
+
+        for size in self.thumb_sizes:
+            self._save_thumb(name, size)
+        return result
+
+
+class ThumbsImageFileField(ImageFieldFile):
+    def __init__(self, *args, **kwargs):
+        super(ThumbsImageFileField, self).__init__(*args, **kwargs)
+        self.thumb_sizes = self.field.thumb_sizes
+        self._make_prop()
+
+    def get_thumb_name(self, size):
+        thumb_name = self.storage.get_thumb_name(self.name, size)
+        if self.storage.exists(self.name) \
+                and not self.storage.exists(thumb_name):
+            self.storage._save_thumb(self.name, size)
+        return thumb_name
+
+    def _make_prop(self):
+        for size in self.thumb_sizes:
+            if self.name:
+                thumb_name = self.get_thumb_name(size)
+                path = self.storage.path(thumb_name)
+                url = self.storage.url(thumb_name)
+            else:
+                path = url = None
+            setattr(self, 'path_%s' % size, path)
+            setattr(self, 'url_%s' % size, url)
+
+    def save(self, *args, **kwargs):
+        super(ThumbsImageFileField, self).save(*args, **kwargs)
+        if self.name and self.storage.exists(self.name):
+            self._make_prop()
+
+    def delete(self, *args, **kwargs):
+        super(ThumbsImageFileField, self).delete(*args, **kwargs)
+        if self.name and self.storage.exists(self.name):
+            self._make_prop()
+
+
+class ThumbsImageField(models.ImageField):
+    attr_class = ThumbsImageFileField
+    def __init__(self, size=None, thumb_sizes=None, thumb_upload_to=None, **kwargs):
+        if 'storage' not in kwargs:
+            kwargs['storage'] = ThumbsStorage(
+                                    size=size,
+                                    thumb_sizes=thumb_sizes,
+                                    thumb_upload_to=thumb_upload_to)
+        self.size = size or None
+        self.thumb_sizes = thumb_sizes or []
+        super(ThumbsImageField, self).__init__(**kwargs)

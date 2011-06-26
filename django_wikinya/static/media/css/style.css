@@ -1,0 +1,149 @@
+*{margin:0; padding:0;}
+
+body {
+font-family: Verdana, Arial, "Trebuchet MS", Sans-Serif, Georgia, Courier, "Times New Roman", Serif;
+font-size: 12px;
+background: #DCDCDC;
+color: #333;
+margin:0;
+padding:0;
+line-height: 135%;
+}
+
+a { color: #336699; text-decoration: none; }
+a:hover { text-decoration: none; color : #880000; }
+
+img { border: none; padding: 6px; }
+img a {border:none;}
+
+ul { list-style-type: none; }
+
+#page {
+width: 800px;
+margin: 0 auto;
+}
+
+#header {
+background: url(/media/images/sbluexhtml/header.jpg) no-repeat;
+height: 110px;
+}
+#header h1 {
+font-size: 27px;
+font-weight: 100;
+padding: 25px 0 0 50px;
+}
+#header h1 a {
+color: #5085BB;
+}
+#header h1 a:hover {
+color: #444;
+}
+#header h2 {
+color: #444;
+font-size: 17px;
+font-weight: 100;
+padding: 7px 0 0 50px;
+}
+
+#menu {
+background: url(/media/images/sbluexhtml/menu.jpg) no-repeat;
+height: 30px;
+line-height: 30px;
+}
+
+#menu ul {
+list-style-type: none;
+margin: 0;
+padding-left: 40px;
+}
+#menu ul li {
+display: block;
+float: left;
+}
+#menu ul li a {
+display: block;
+padding: 0 10px 0 10px;
+text-decoration: none;
+color: #fff;
+font-size: 13px;
+font-weight: 600;
+}
+#menu ul li a:hover {
+color: #fff;
+background: url(/media/images/sbluexhtml/menuover.png) repeat-x;
+}
+
+#wrapper {
+background: url(/media/images/sbluexhtml/content.jpg) repeat-y;
+padding: 0 30px;
+}
+
+#content {
+float: left;
+width: 510px;
+padding-top: 15px;
+}
+
+#sidebar {
+float: right;
+width: 210px;
+}
+
+#footer {
+background: url(/media/images/sbluexhtml/footer.jpg) no-repeat;
+margin: 0 auto;
+font-weight: 100;
+font-size: 12px;
+text-align: center;
+color #fff;
+height: 50px;
+line-height: 50px;
+}
+#footer p { color: #fff; }
+#footer a { color: #fff; text-decoration: none; }
+#footer a:hover { text-decoration: underline; }
+
+#content h2 {
+font-weight: 100;
+font-size: 23px;
+margin: 0 0 4px; padding: 0 0 3px;
+color: #555;
+}
+
+#content ul {
+color: #555555;
+padding: 10px 30px;
+}
+#content ul li {
+list-style-type: square;
+}
+
+#sidebar img { padding: 0; margin: 0; }
+#sidebar ul {
+    list-style-type: none;
+}
+
+#sidebar h2 {
+    background: url(/media/images/sbluexhtml/sidebarh2.jpg) no-repeat;
+    height: 30px;
+    line-height: 30px;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 20px 0 0 0; padding: 0 0 0 10px;
+    color: #fff;
+}
+
+#sidebar ul li {
+
+}
+
+#sidebar ul {
+padding: 10px 0 5px 10px;
+}
+
+#sidebar ul li {
+    background: url(/media/images/sbluexhtml/bullet.jpg) no-repeat center left;
+    padding: 2px 0 2px 22px;
+}
+#sidebar ul li a { font-size: 13px; }
+

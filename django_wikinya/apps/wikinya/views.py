@@ -19,13 +19,9 @@ from models import WikiPage
 
 @revision.create_on_success
 def wiki_page(request, page_path):
-    page_path = page_path.split('/')
-    kw = {}
-    for n, piece in enumerate(reversed(page_path[:-1]), start=1):
-        field = '%s__title'%'__'.join(['parent_page']*n)
-        kw[field] = piece
-    pages = WikiPage.objects.filter(**kw)
-    page = get_object_or_404(pages, title=page_path[-1])
+    page = WikiPage.get_page_by_path(page_path)
+    if not page:
+        raise Http404("not page")
     context = {}
     context['page'] = page
     return render_template(request, 'page.html', context)

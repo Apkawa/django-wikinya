@@ -1,0 +1,2 @@
+from snippets.picklefield import ZipPickledObjectField, PickledObjectField
+from snippets.thumbsimagefield import ThumbsImageField
