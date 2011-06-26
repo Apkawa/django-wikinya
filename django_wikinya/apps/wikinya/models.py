@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import os
 from django.db import models
 from django.utils.safestring import mark_safe
+from django.core.urlresolvers import reverse
 
 from mptt.models import MPTTModel
 import reversion
@@ -16,6 +18,7 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+
 
 class WikiPage(MPTTModel, BaseModel):
     author = models.ForeignKey('auth.User')
@@ -43,7 +46,7 @@ class WikiPage(MPTTModel, BaseModel):
         return mark_safe(wiki2html(self.text))
 
     @classmethod
-    def get_page_by_path(cls, path):
+    def get_object_by_path(cls, path):
         page_path = path.split('/')
         kw = {}
         kw['title'] = page_path[-1]
@@ -59,6 +62,15 @@ class WikiPage(MPTTModel, BaseModel):
         except IndexError:
             return None
 
+    def get_source_path(self):
+        parent_pages = list(self.get_ancestors().values_list('title', flat=True))
+        parent_pages.append(self.title)
+        return '/'.join(parent_pages)
+
+    def get_url(self):
+        return reverse('wiki_page', kwargs={'page_path':self.get_source_path()})
+
+
 
 
 class WikiPageMeta(models.Model):
@@ -70,6 +82,19 @@ class WikiPageMeta(models.Model):
     type_version = models.CharField(max_length=2, choices=TYPE_VERSION_CHOICES, default='t')
 
 
+class WikiImageAttachementMixin(object):
+    @classmethod
+    def get_object_by_path(cls, path):
+        pages_path, filename = os.path.split(path)
+        page = WikiPage.get_object_by_path(pages_path)
+        try:
+            return cls.objects.filter(page=page, title=filename)[0]
+        except IndexError:
+            return None
+
+    def get_source_path(self):
+        page_path = self.page.get_source_path()
+        return os.path.join(page_path, self.title)
 
 def wikiimage_upload_to(instance, filename):
     return 'wiki/images/o/%s'%filename
@@ -77,7 +102,7 @@ def wikiimage_upload_to(instance, filename):
 def wikiimage_thumb_upload_to(orig_filename, size):
     return 'wiki/images/t/%s/%s'%(size, orig_filename)
 
-class WikiImage(BaseModel):
+class WikiImage(BaseModel, WikiImageAttachementMixin):
     title = models.CharField(null=True, blank=True, max_length=256)
     image = ThumbsImageField(upload_to=wikiimage_upload_to, thumb_upload_to=wikiimage_thumb_upload_to,
             thumb_sizes=[128, 256, 512, 1024])
@@ -95,6 +120,13 @@ class WikiImage(BaseModel):
 
         super(WikiImage, self).save(*args, **kwargs)
 
+    def get_url(self):
+        return self.image.url
+
+
+
+
+
 def attachement_upload_to(instance, filename):
     if instance.page:
         return 'wiki/attachements/%s/%s' % (instance.page.title, filename)
@@ -102,7 +134,7 @@ def attachement_upload_to(instance, filename):
         return 'wiki/attachements/%s' % (filename)
 
 
-class WikiAttachement(BaseModel):
+class WikiAttachement(BaseModel, WikiImageAttachementMixin):
     title = models.CharField(null=True, blank=True, max_length=256)
     attach = models.FileField(upload_to=attachement_upload_to)
     meta_info = PickledObjectField(blank=True, null=True)
@@ -118,6 +150,9 @@ class WikiAttachement(BaseModel):
             self.title = self.attach.name
 
         super(WikiAttachement, self).save(*args, **kwargs)
+
+    def get_url(self):
+        return self.attach.url
 
 reversion.register(WikiPage)
 reversion.register(WikiImage)

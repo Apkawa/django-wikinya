@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 import urlparse
 
 from xml.sax.saxutils import escape
+
 
 from creole import creole2html
 from creole.creole2html.parser import BlockRules, CreoleParser
 from creole.creole2html.emitter import HtmlEmitter
 
 from django.core.urlresolvers import reverse
+from django.http import QueryDict
+
 
 class TagException(Exception):
     pass
@@ -62,7 +66,43 @@ class BaseTag(object):
                     'text': self.text,
                     }
 
-class Link(BaseTag):
+class SourceLinkMixin(object):
+    '''
+    image:namespace/img.jpg
+    attach:namespace/attach.zip
+    '''
+    source_re = re.compile(r'^(?P<type>image|attach|page):(?P<path>.*?)(?:\?(?P<args>.*)|)$')
+
+    def parse_source(self, path):
+        match = self.source_re.match(path)
+        if match:
+            groups = match.groupdict()
+            #parse_path = urlparse.urlparse(groups['path'])
+            #groups['path'] = parse_path.path
+            groups['args'] = QueryDict(groups['args'])
+            return groups
+
+
+
+    def get_source_model(self, source_type):
+        from models import WikiImage, WikiAttachement, WikiPage
+        if source_type == 'image':
+            return WikiImage
+        elif source_type == 'attach':
+            return WikiAttachement
+        elif source_type == 'page':
+            return WikiPage
+
+    def get_source_object(self, path):
+        parsed_source = self.parse_source(path)
+        if parsed_source:
+            source_model = self.get_source_model(parsed_source['type'])
+            return source_model.get_object_by_path(parsed_source['path'])
+
+
+
+
+class LinkTag(BaseTag, SourceLinkMixin):
     tag_name = 'a'
 
     def validate(self):
@@ -71,30 +111,62 @@ class Link(BaseTag):
 
     def parse(self):
         href = self.attrs['href']
-        parse_href = urlparse.urlparse(href)
-        if not parse_href.scheme:
-            self.add_attr('class', 'wikilink')
-            from models import WikiPage
-            page = WikiPage.get_page_by_path(parse_href.path)
-            if not page:
+        parse_source = self.parse_source(href)
+        if parse_source:
+            self.add_attr('class', 'wiki_link')
+            source_model = self.get_source_model(parse_source['type'])
+            source = source_model.get_object_by_path(parse_source['path'])
+            if not source:
                 self.add_attr('class', 'no_wiki_page')
-            self.set_attr('href', reverse('wiki_page', kwargs={'page_path':href}))
+                self.set_attr('href', reverse('wiki_page',
+                                kwargs={'page_path':parse_source['path']}))
+            else:
+                self.set_attr('href', source.get_url() )
+
+class ImgTag(BaseTag, SourceLinkMixin):
+    tag_name = 'img'
+    sizes_map = {
+            'small': 256,
+            'medium': 512,
+            'large': 1024,
+
+            }
+    def validate(self):
+        if 'src' not in self.attrs:
+            raise TagException('not exists href or name')
+
+    def parse(self):
+        href = self.attrs['src']
+        parse_source = self.parse_source(href)
+        if parse_source:
+            self.add_attr('class', 'wiki_image')
+            source_model = self.get_source_model(parse_source['type'])
+            source = source_model.get_object_by_path(parse_source['path'])
+            if not source:
+                self.add_attr('class', 'wiki_broken_img')
+                self.set_attr('src', 'default.img')
+            else:
+                args = parse_source['args']
+                for a in ['title', 'alt']:
+                    self.set_attr(a, source.title)
+                if 'h' in args:
+                    self.set_attr('height',args['h'])
+                if 'w' in args:
+                    self.set_attr('width',args['w'])
+
+                if parse_source['type'] == 'image':
+                    img_url = source.get_url()
+                    for key, size in self.sizes_map.iteritems():
+                        if key in args:
+                            img_url = getattr(source.image, 'url_%s'%size)
+                            break
+
+                    self.set_attr('src', img_url)
+                else:
+                    self.set_attr('src', source.get_url() )
 
 
 class WikinyaHtmlEmitter(HtmlEmitter):
-    def _make_link(self, href, inside):
-        parse_href = urlparse.urlparse(href)
-        attrs = {}
-        if not parse_href.scheme:
-            attrs = {'class':['wikilink']}
-            from models import WikiPage
-            page = WikiPage.get_page_by_path(parse_href.path)
-            if not page:
-                attrs['class'].append('no_wiki_page')
-            href = os.path.join('/wiki', href)
-        return href, inside, attrs
-
-
     def link_emit(self, node):
         target = node.content
         if node.children:
@@ -102,10 +174,19 @@ class WikinyaHtmlEmitter(HtmlEmitter):
         else:
             inside = self.html_escape(target)
 
-        link = Link(text=inside, attrs={'href':target})
+        link = LinkTag(text=inside, attrs={'href':target})
         link.validate()
         link.parse()
         return link.render()
+
+    def image_emit(self, node):
+        target = node.content
+        text = self.attr_escape(self.get_text(node))
+
+        img = ImgTag(attrs={'src':target, 'title':text, 'alt':text})
+        img.validate()
+        img.parse()
+        return img.render()
 
 def wiki2html(text):
     return creole2html(text, debug=True)

@@ -19,7 +19,7 @@ from models import WikiPage
 
 @revision.create_on_success
 def wiki_page(request, page_path):
-    page = WikiPage.get_page_by_path(page_path)
+    page = WikiPage.get_object_by_path(page_path)
     if not page:
         raise Http404("not page")
     context = {}
