@@ -4,6 +4,8 @@ from django.db import models
 from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
 
+from django.contrib.contenttypes import generic
+
 from mptt.models import MPTTModel
 import reversion
 
@@ -26,6 +28,7 @@ class WikiPage(MPTTModel, BaseModel):
     title = models.CharField(max_length=512, db_index=True)
     text = models.TextField()
 
+    page_meta_info = PickledObjectField(null=True, blank=True)
     parent_page = models.ForeignKey('self', null=True, blank=True, related_name='children_pages')
 
     class Meta:
@@ -70,7 +73,15 @@ class WikiPage(MPTTModel, BaseModel):
     def get_url(self):
         return reverse('wiki_page', kwargs={'page_path':self.get_source_path()})
 
+#class WikiLink(models.Model):
+#    wiki_link = models.CharField(max_length=256)
+#    content_type = models.ForeignKey('contenttypes.ContentType')
+#    object_id = models.PositiveIntegerField()
+#    source = generic.GenericForeignKey('content_type', 'object_id')
 
+#class WikiBackwardLink(models.Model):
+#    link = models.ForeignKey('WikiLink')
+#    page = models.ForeignKey('WikiPage')
 
 
 class WikiPageMeta(models.Model):

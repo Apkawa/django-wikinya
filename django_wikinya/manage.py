@@ -1,4 +1,4 @@
-#!./virtualenv_python
+#!./virtualenv_python.sh
 from django.core.management import execute_manager
 
 import imp
