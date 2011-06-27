@@ -130,8 +130,8 @@ INSTALLED_APPS = (
     'reversion',
     'mptt',
     'south',
-    #
     'django_virtualenv',
+    #
     'utils',
     'wikinya',
 )

@@ -1,10 +1,4 @@
-#!/usr/bin/env python2
-try:
-    from apps.django_virtualenv import init_env
-    init_env()
-except ImportError:
-    pass
-
+#!./virtualenv_python
 from django.core.management import execute_manager
 
 import imp
