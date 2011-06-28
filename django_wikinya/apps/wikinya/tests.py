@@ -56,6 +56,37 @@ class LinkTagTest(TestCase):
         link.parse()
         assert u'<a href="/media/test.zip" class="wiki_link">test</a>' == link.render(), link.render()
 
+class WikiPageTest(TestCase):
+    def test_get_page(self):
+        page = mommy.make_one(WikiPage, title='p1')
+        page2 = mommy.make_one(WikiPage, title='p2', parent_page=page)
+
+        assert WikiPage.get_object_by_path('/'.join([page.title])) != None
+        assert WikiPage.get_object_by_path('/'.join([page.title, page2.title])) != None
+
+    def test_make_path(self):
+        page = mommy.make_one(WikiPage, title='p1')
+        page2 = mommy.make_one(WikiPage, title='p2', parent_page=page)
+        pages = WikiPage.make_path('p1/p2/p3')
+        assert page.id == pages[0].id
+        assert page2.id == pages[1].id
+        assert len(pages) == 2
+
+
+    def test_make_path_one_parent(self):
+        page = mommy.make_one(WikiPage, title='p1')
+        pages = WikiPage.make_path('p1/p2')
+        assert page.id == pages[0].id
+        assert len(pages) == 1
+
+    def test_make_path_one(self):
+        page = mommy.make_one(WikiPage, title='p1')
+
+        pages = WikiPage.make_path('p1')
+        assert len(pages) == 0
+        assert WikiPage.objects.count() == 1
+
+
 
 
 

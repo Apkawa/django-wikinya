@@ -17,6 +17,7 @@ from utils.fields import PickledObjectField, ThumbsImageField
 class BaseModel(models.Model):
     datetime_create = models.DateTimeField(auto_now_add=True)
     datetime_update = models.DateTimeField(auto_now=True)
+    #ip = models.I
 
     class Meta:
         abstract = True
@@ -43,14 +44,14 @@ class WikiPage(MPTTModel, BaseModel):
     def __unicode__(self):
         return self.title
 
+
     @property
     def html_text(self):
-
         return mark_safe(wiki2html(self.text))
 
     @classmethod
     def get_object_by_path(cls, path):
-        page_path = path.split('/')
+        page_path = cls.normal_path(path).split('/')
         kw = {}
         kw['title'] = page_path[-1]
         for n, piece in enumerate(reversed(page_path[:-1]), start=1):
@@ -65,6 +66,17 @@ class WikiPage(MPTTModel, BaseModel):
         except IndexError:
             return None
 
+    @staticmethod
+    def normal_path(path):
+        return path.strip().strip('/')
+
+    @staticmethod
+    def get_title_from_path(path):
+        spl = WikiPage.normal_path(path).split('/')
+        if len(spl) > 1:
+            return spl[-1]
+        return spl[0]
+
     def get_source_path(self):
         parent_pages = list(self.get_ancestors().values_list('title', flat=True))
         parent_pages.append(self.title)
@@ -72,6 +84,36 @@ class WikiPage(MPTTModel, BaseModel):
 
     def get_url(self):
         return reverse('wiki_page', kwargs={'page_path':self.get_source_path()})
+
+    @classmethod
+    def make_path(self, page_path, kwargs={}, commit=True, skip_last=True):
+        path_spl = self.normal_path(page_path).split('/')
+        if skip_last:
+            path_spl.pop()
+        path_spl_length = len(path_spl)
+        page_cache = {}
+        for n, page_title in enumerate(path_spl, start=1):
+            if n == path_spl_length:
+                p_p = '/'.join(path_spl)
+            else:
+                p_p = '/'.join(path_spl[:n])
+            page = self.get_object_by_path(p_p)
+            if not page:
+                page = WikiPage(title=page_title, **kwargs)
+            page_cache[page_title] = page
+
+
+        last = None
+        for page_title in path_spl:
+            page = page_cache[page_title]
+            if not page.id:
+                page.parent_page = last
+                if commit:
+                    page.save()
+            last = page
+        return [page_cache[pt] for pt in path_spl]
+
+
 
 #class WikiLink(models.Model):
 #    wiki_link = models.CharField(max_length=256)

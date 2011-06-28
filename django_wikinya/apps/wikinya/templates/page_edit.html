@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ page.title|default:_("new page")|capfirst }}
+{% endblock title %}
+
+
+{% block content %}
+    {% if preview_action %}
+    <div id="preview">
+        {{ page.html_text }}
+    </div>
+    {% endif %}
+    <form action="{% url wiki_page page_path %}?edit" method="POST">
+        {% csrf_token %}
+        <p>{{ form.text }}</p>
+        <input type="submit" name="preview" value="Preview">
+        <button>{{ _("save")|capfirst }}</button>
+    </form>
+{% endblock content %}
